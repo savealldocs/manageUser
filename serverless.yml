@@ -1,0 +1,91 @@
+# Welcome to Serverless!
+#
+# For full config options, check the docs:
+#    docs.serverless.com
+
+service: userApi
+variablesResolutionMode: 20201221
+
+# app and org for use with dashboard.serverless.com
+#app: your-app-name
+#org: your-org-name
+
+provider:
+  name: aws
+  runtime: nodejs14.x
+
+  # you can overwrite defaults here
+  stage: dev
+  region: ap-southeast-2
+
+  # you can add statements to the Lambda function's IAM Role here
+
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:DeleteItem
+      Resource: "*"
+
+  # you can define service wide environment variables here
+  environment:
+    DYNAMODB_TABLE_NAME: ${self:custom.postsTableName}
+
+# you can add packaging information here
+#package:
+#  patterns:
+#    - '!exclude-me.js'
+#    - '!exclude-me-dir/**'
+#    - include-me.js
+#    - include-me-dir/**
+
+functions:
+  createUser:
+    handler: src/handlers.createUser
+    events:
+      - httpApi:
+          path: /users
+          method: post
+  getUser:
+    handler: src/handlers.getUser
+    events:
+      - httpApi:
+          path: /users/{id}
+          method: get
+  deleteUser:
+    handler: src/handlers.deleteUser
+    events:
+      - httpApi:
+          path: /users/{id}
+          method: delete
+custom:
+  postsTableName: UsersTable
+  dynamodb:
+    stages:
+      - dev
+    start:
+      migrate: true
+  serverless-offline:
+    resourceRoutes: true # HTTP proxy
+
+plugins:
+  - serverless-plugin-typescript
+
+resources:
+  Resources:
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.postsTableName}
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
